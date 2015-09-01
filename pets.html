@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html ng-app='petsApp'>
+<head>
+  <title></title>
+  <script type="text/javascript" src="bower_components/angular/angular.js"></script>
+  <script type="text/javascript" src="app/app.js"></script>
+  <script type="text/javascript" src="app/controllers/petsController.js"></script>
+
+</head>
+  <!-- Using $scope as the View Model -->
+  <body ng-controller="PetsController">
+  <h3> Pets</h3>
+  <br/>
+  <table>
+    <tr>
+      <th>Name</th>
+      <th>Species</th>
+      <th>Age</th>
+    </tr>
+    <tr ng-repeat="pet in pets">
+      <td>{{pet.name}}</td>
+      <td>{{pet.species}}</td>
+      <td>{{pet.age}}</td>
+    </tr>
+  </table>
+  <br/>
+  <span>Oldest pet: {{oldestPet().name}}</span>
+  <br/>
+  <span>Number of pets: {{totalPets()}}</span>
+  </body>
+</html>
