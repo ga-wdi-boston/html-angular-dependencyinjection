@@ -196,7 +196,7 @@ var address1 = new Location('33 Main St', 'Melrose', 'MA', '09849', DummyLatLong
 
 ```
 
-So, we found that by using a some software design concepts out code could be more flexible and easily testable. 
+So, we found that by using a some software design concepts our code could be more flexible and easily testable. 
 
 And we didn't need to get everything working to validate our domain or data model.
 
@@ -305,6 +305,73 @@ Take a look at the person controller.
   angular.module('petsApp').controller('PetsController', PetsController);
 
 })(angular);
+```
+OK, this is an example of how Angular uses Dependency Injection. 
+
+But, it does a little more that we've seen so far. Let's keep looking.
+
+Inject the $log Angular service into the controller.
+
+```javascript
+...
+ function PetsController($scope, $log){
+...
+// show me the $log service injected into this Controller by Angular
+...
+    console.log($log);
+
+    // OK, let's use this $log service
+    $log.debug("Hey there pet owner");
+    $log.info("Hey there pet owner");
+    $log.warn("Hey there pet owner");
+    $log.error("Hey there pet owner");
+```
+
+Ok, we can what that does, eh!
+
+We'll be injecting more service into the controller over time.
+
+
+## Minification Problem.
+
+The way that Angular determines what dependencies to inject is that it will read all of the Controller arguments and look for it's own services by that name.
+
+Angular will look for a service named `$scope` and inject it into the controller.
+
+Then it will look for a service named `$log` and inject it into the controller.
+
+The problem is when one minifies this code the names of `$scope` and `$log` will be shortened and Angular won't be able to find these services to inject.
+
+For example, let's minify this code with [JS Online Minifier](http://javascript-minifier.com/) :  
+
+```javascript
+ function PetsController($scope, $log){
+ 	$scope.pets = [
+      {name: 'Rover', species: 'Dog', age: 7},
+      {name: 'Milo', species: 'Horse', age: 13},
+      {name: 'Dolce', species: 'Cat', age: 1},
+      {name: 'Mertle', species: 'Turtle', age: 134}
+    ];
+    console.log($log);
+};
+```
+
+The output will be: 
+
+```javascript
+function PetsController(e,s){e.pets=[{name:"Rover",species:"Dog",age:7},{name:"Milo",species:"Horse",age:13},{name:"Dolce",species:"Cat",age:1},{name:"Mertle",species:"Turtle",age:134}],console.log(s)}
+```
+
+Now Angular will attempt to find the servies named `e` and `s`. But, it won't find them.
+
+"To allow the minifiers to rename the function parameters and still be able to inject the right services, the function needs to be annotated with the $inject property. The $inject property is an array of service names to inject." [Angular Dependency Injection](https://docs.angularjs.org/guide/di)
+
+This will insure all depenendencies are injected, even after minification.
+
+```javascript
+  // make sure minification doesn't loose our dependencies.
+  PetsController.$inject = ['$scope','$log'];
+
 ```
 
 ## Documentation
