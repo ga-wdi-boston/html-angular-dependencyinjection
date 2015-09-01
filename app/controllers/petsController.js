@@ -37,6 +37,9 @@
 
   } // end of Constructor function
 
+  // make sure minification doesn't loose our dependencies.
+  PetsController.$inject = ['$scope','$log'];
+  
   // The controller is part of the app module
   angular.module('petsApp').controller('PetsController', PetsController);
 
