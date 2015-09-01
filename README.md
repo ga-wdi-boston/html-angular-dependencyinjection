@@ -20,10 +20,203 @@ We are going to look at Dependency Injection, as a general concept in software d
 
 [Wikipedia: Dependency Injection](https://en.wikipedia.org/wiki/Dependency_injection)
 
-### DI in Javascript
+## DI in Javascript
 
-There are two types of DI in javascript.
-Lets Look at some code that could use Dependency injection!, **Open up di.js**
+Lets create some code that could use Dependency injection!, **Final version is di_done.js**
+
+**Create a file di.js**
+
+*Create joe*
+
+```javascript
+// Create a Person with an address and Profile.                                 
+
+function Person(street, city, state, zip, fname, lname, dob){
+  this.street = street;
+  this.city = city;
+  this.state = state;
+  this.zip = zip;
+  this.fName = fname;
+  this.lName = lname;
+};
+
+var joe = new Person('33 Main St', 'Melrose', 'MA', '09849', 'joe', 'smoe');
+console.log('joe is ');
+console.log(joe);
+```
+
+Now joe has some roomies, tom and liz. Create them.
+
+```javascript 
+...
+var joe = new Person('33 Main St', 'Melrose', 'MA', '09849', 'joe', 'smoe');
+console.log('joe is ');
+console.log(joe);
+
+var tom = new Person('33 Main St', 'Melrose', 'MA', '09849', 'tom', 'smith');
+console.log('tom is ');
+console.log(tom);
+
+var liz = new Person('33 Main St', 'Melrose', 'MA', '09849', 'liz', 'jones');
+console.log('liz is ');
+console.log(liz);
+```
+
+Oops, let's refactor out the Address, and call it a Location, OK?
+
+```javascript
+///////////////////////////////////////////                                         
+// Create a Location                                                                
+
+function Location(street, city, state, zip, fname, lname, dob){
+  this.street = street;
+  this.city = city;
+  this.state = state;
+  this.zip = zip;
+};
+
+///////////////////////////////////////////                                         
+// Create a Person with an address and Profile.                                     
+
+function Person(address, fname, lname, dob){
+  this.address = address;
+  this.fName = fname;
+  this.lName = lname;
+};
+
+var address1 = new Location('33 Main St', 'Melrose', 'MA', '09849');
+var joe = new Person(address1, 'joe', 'smoe');
+console.log('joe is ');
+console.log(joe);
+
+var tom = new Person(address1,'tom', 'smith');
+console.log('tom is ');
+console.log(tom);
+
+var liz = new Person(address1,'liz', 'jones');
+console.log('liz is ');
+console.log(liz);
+
+```
+
+We **Seperated our Concerns** by refactoring the Location concern/concept into it's own class. *Yeah, now we can change how we implement a Location!!*
+
+So, Lets give Location a way to look up it's latitude and longitude. But, we have to use a remote services, e.g. an API that provides this info.
+
+
+```javascript
+///////////////////////////////////////////
+// Create a LatLongSerice
+
+function LatLongService(){
+}
+
+LatLongService.get = function(zip){
+  // save this point in scope
+  // so then call back below can use it.
+  var _self = this;
+  // pseudo code
+  // returns a JQuery Promise
+  return $.ajax({url: 'http://getit.com'})
+    .then(function(data){
+      _self.lat = data.lat;
+      _self.long = data.long;
+    });;
+};
+///////////////////////////////////////////
+// Create a Location
+
+function Location(street, city, state, zip,LatLongService){
+  this.street = street;
+  this.city = city;
+  this.state = state;
+  this.zip = zip;
+  this.getCoordinates(LatLongService);
+};
+
+Location.prototype.getCoordinates = function(LatLongService){
+  LatLongService.get.bind(this);
+  LatLongService.get(this.zip);
+};
+
+///////////////////////////////////////////
+// Create a Person with an address and Profile.
+
+function Person(address, fname, lname, dob){
+  this.address = address;
+  this.fName = fname;
+  this.lName = lname;
+};
+
+// Address now uses, and depends on, the LatLongService. So lets inject it.
+// 
+var address1 = new Location('33 Main St', 'Melrose', 'MA', '09849',LatLongService);
+
+var joe = new Person(address1, 'joe', 'smoe');
+console.log('joe is ');
+console.log(joe);
+
+var tom = new Person(address1,'tom', 'smith');
+console.log('tom is ');
+console.log(tom);
+
+var liz = new Person(address1,'liz', 'jones');
+console.log('liz is ');
+console.log(liz);
+
+```
+
+Bummer, it doesn't work, huh? 
+
+Oh, seems like the LatLongService depends on JQuery to 
+provide the ``$.ajax`` for remote AJAX calls.
+
+We can fix that using a Dummy or Mock LatLongService. I'm just not ready to commit to all these libraries before I get my Data/Domain Model yet.
+
+```javascript
+///////////////////////////////////////////
+// Create a Mock or Dummy LatLongService
+function DummyLatLongService(){
+}
+
+DummyLatLongService.get = function(zip){
+  this.lat =  '38.272689';
+  this.long = '-76.289063';
+};
+...
+
+Location.prototype.getCoordinates = function(LatLongService){
+  LatLongService.get.bind(this);
+  LatLongService.get(this.zip);
+};
+
+...
+
+var address1 = new Location('33 Main St', 'Melrose', 'MA', '09849', DummyLatLongService);
+
+```
+
+So, we found that by using a some software design concepts out code could be more flexible and easily testable. 
+
+And we didn't need to get everything working to validate our domain or data model.
+
+##### Design Concepts
+
+* Seperation of Concerns. Each concern, (Location), was localized to it's own software artifact, in this case a JS class.
+* Single Responsibility Principal. Each class should have one *Responsibility*. Location class was responsible for it's Location-like Behavior.
+* Dependency Injection. By injecting in objects to a client class we make it much more flexible and easier to test.
+* Open for Change, Closed for Modification. The Person class is open for change. It's Location can change it's implementation with having to change the Person's implementation/code.
+
+The last four of these Principles are part of a very common design tool/concept call **SOLID**. This is an acronym for:
+
+- Single Responsibility Principal.
+- Open for Change, Closed for Modificaton.
+- Liskov Substitution Principal
+- Dependency Injection.
+
+SOLID baaaaby!
+
+[Uncle Bob's SOLID](http://butunclebob.com/ArticleS.UncleBob.PrinciplesOfOod)
 
 [Javascript Dependency Injection](http://rjzaworski.com/2013/02/javascript-dependency-injection-what-you-should-know)
 
@@ -113,197 +306,6 @@ Take a look at the person controller.
 
 })(angular);
 ```
-
-#### ViewModel and $scope
-
-There is a concept of a *_View Model_* in Angular. This View Model will allow a Controller to share Data with a View. 
-
-#### [Angular View Model is NOT a Rails model: optional, little deep maybe](RailsViewModel.md)
-
-
-#####In Angular there are **TWO** ways to share data between an Controller and a View.   
-
-* First, and **preferred** is using the "Controller as" method.  The View Model is an instance of the Controller.
-* Second is to use `$scope`. The View Model is `$scope`.
-
-### Using "Controller as" method.
-
-This is the recommended way to to share data. The View Model will be an instance of the Controller.
-
-**Create a pets.html**
-
-```html
-<!document html>
-<html ng-app>
-  <head>
-     <script type='text/javascript' src='bower_components/angular/angular.js'></script>
-  </head>
-  <body>
-  </body>
-</html>
-```
-**Create a app/app.js**
-
-```javascript
-angular.module('petsApp', []);
-```
-
-**Add the application name/module to the ng-app directive in the pets.html**
-
-```html
-...
-<html ng-app='petsApp'>
-...
-```
-
-This will name the Angular application, provide a namespace for it, 'petsApp', and a top level module. *We'll learn about modules later.*
-
-**Add a Controller file, app/controllers/petsController.js**
-
-```javascript
-(ƒ(angular){
-
-  // Constructor Function                                                                                         
-  function PetsController(){
-    this.pets = [{name: 'Rover', species: 'Dog', age: 7},{name: 'Milo', species: 'Horse', age: 3}, {name: 'Sh*tCa\
-t', species: 'Cat', age: 11}, {name: 'Mertle', species: 'Turtle', age: 123 } ];
-
-  }
- 
-  // The Controller is part of the module.                                                                        
-  angular.module('petsApp').controller('PetsController', PetsController);
-
-})(angular);
-```
-
-Lots of stuff here. 
-
-We are creating a Controller for pets. It's really just a Javascript Constructor Function. *Later, we'll use it to create ONE instance of a PetsController.*
-
-Then we create an array of object literals, each one holding data about a pet. *The controller instance we create in the view will have it's 'pets' property set to this array of pets.*
-
-Notice that we put all the code in an IIFE that get's passed the *global* angular variable. *Passing in a global is just an optimization, JS doesn't need to search up though all enclosing scopes to look for a variable.*
-
-*We do this so we can put private variables in this scope that will NOT pollute the global namespace.*
-
-*We haven't yet created any private variables, but we may as time goes on*
-
-**Update the pets.html to use this controller**
-
-```html
-  ...
-  <head>
-  <script type='text/javascript' src='bower_components/angular/angular.js'><\
-/script>
-  <script type='text/javascript' src='app/app.js'></script>
-  <script type='text/javascript' src='app/controllers/petsController.js'></script>
-  </head>
-
-  <body ng-controller="PetsController as petsCtrl">
-    <h3>Pets</h3>
-    <br/>
-    <table>
-      <tr>
-        <th>Name</th>
-        <th>Species</th>
-	<th>Age</th>
-      </tr>
-      <tr ng-repeat="pet in petsCtrl.pets">
-	<td>{{ pet.name }}</td>
-        <td>{{ pet.species}}</td>
-        <td>{{ pet.age }}</td>
-      </tr>
-    </table>
-  </body>
-```
-
-Open this pets.html in the browser. You should see a table of pets.
-
-First, we included the javascript files for the app, app.js, and the controller, app/controllers/pets_controller.js.
-
-Then in the ``body`` tag we created a ``ng-controller`` attribute. We set this attribute to have a value that will make the one *instance* of the PetsController avaialble in the View. The name will be 'petsCtrl' in the view will refer to this ONE instance of the PetsController.
-
-
-**Add this to the PetsController, right above the angular.module line.**
-
-```javascript
-... 
-  PetsController.prototype.totalPets = function(pet){
-    return this.pets.length;
-  };
-
-  PetsController.prototype.oldestPet = function(){
-    var candidatePet = this.pets[0];
-
-    this.pets.forEach(ƒ(pet){
-      if (pet.age > candidatePet.age) {
-	     candidatePet = pet;
-      }
-    });
-
-    return candidatePet;
-  };
-... 
-```
-
-Here we create to methods on the controller. 
-
-
-**Add this to the pets.html**
-
-```html
- <br/>
-    <span>Oldest pet: {{ petsCtrl.oldestPet().name }}</span><br/>
-    <span>Total number of pets: {{ petsCtrl.totalPets() }}</span>
-```
-
-This will use these two Controller methods in the View.
-
-
-### Using $scope (OPTIONAL)
-The ViewModel is shared between a Controller and a View. __In this case $scope is the ViewModel.__
-
-* The ViewModel, ``$scope``, is injected into the Controller.
-* The Controller can add or change a properties in the $scope and make them visible to the View.
-
-
-In Angular, one must _explicitly_ set a property on the ViewModel, $scope, in the Controller for it to become available in the View. 
-
-For example, in order to share a property between a Controller and a View one __must__ set this property on the ViewModel, $scope.
-
-In the Controller:  
-
-```javascript
-$scope.pet = {name: 'Rover', species: 'Dog', age: 7};
-
-```
-
-Is made available in the View:
-
-
-```html
- <p> {{pet.name} is only {{pet.age}</p>
-```
-
-
-## Lab: Customer's Controller
-
-Let's refactor the code we've used in the previous lesson about Views and Directives into an Angular Controller.
-
-
-1. Start with the code from the last directives lesson, directives_last.html.  
-2. Rename this html file to customers.html.  
-3. Create a application module for this customer's app in app/customers.js  
-4. Update the ng-app directive in the customers.html, ya know in the html tag. 
-5. Create a controller in the app/controllers/customersController.js  
-	5.1 Create an array of customers in the controller, *hint move it from the ng-init.*  
-	5.2 Create controller properties for ``sortBy`` and ``reverse``.  
-
-6. Update the body tag so we will create one instance of the CustomersController for the view. The view will refer to this instance ``as`` customersCtrl.  
-7. Invoke the CustomersController.doSort method where needed. *Yes, you must create this controller method.*  
-8. Invoke the CustomersController.numOfCustomers method where needed. *Yes, you must create this controller method.* 
-
-**The customers_done.html file will have the finished template.**
 
 ## Documentation
 
